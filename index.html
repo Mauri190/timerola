@@ -1,0 +1,2025 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpeedTimer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --secondary-color: #1e293b;
+            --accent-color: #f59e0b;
+            --text-color: #ffffff;
+            --panel-bg: rgba(15, 23, 42, 0.8);
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: var(--text-color);
+            overflow-y: auto;
+            touch-action: manipulation;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: conic-gradient(
+                #ff0000 0deg 90deg,
+                #ffffff 90deg 180deg,
+                #0000ff 180deg 270deg,
+                #ffff00 270deg 360deg
+            );
+            border: 2px solid #333;
+            border-radius: 4px;
+            transform: rotate(-15deg);
+        }
+        
+        .logo-text {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: bold;
+            font-size: 1.5rem;
+            background: linear-gradient(to right, #3b82f6, #10b981);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        
+        .timer-display {
+            font-family: 'Orbitron', monospace;
+        }
+        
+        .scramble-display {
+            font-family: 'Courier New', monospace;
+            letter-spacing: 1px;
+            background: var(--secondary-color);
+            border-left: 3px solid var(--primary-color);
+        }
+        
+        .timer-container {
+            background: var(--panel-bg);
+            border: 1px solid var(--primary-color);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+        
+        .timer-touch-area {
+            background: var(--panel-bg);
+            border: 1px solid var(--primary-color);
+            transition: all 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        
+        .timer-touch-area:hover {
+            background: rgba(15, 23, 42, 0.7);
+        }
+        
+        .ready-state {
+            animation: pulse 1.5s infinite;
+            background: rgba(16, 185, 129, 0.1) !important;
+            border-color: rgba(16, 185, 129, 0.5) !important;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        
+        .timer-red {
+            color: #ef4444;
+        }
+        
+        .timer-green {
+            color: #10b981;
+        }
+        
+        .timer-normal {
+            color: white;
+        }
+        
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--primary-color);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+        }
+        
+        .btn-primary {
+            background: var(--primary-color);
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.4);
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
+        }
+        
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.4);
+        }
+        
+        .btn-training {
+            background: var(--accent-color);
+            box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-training:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(245, 158, 11, 0.4);
+        }
+        
+        .time-entry {
+            transition: all 0.2s ease;
+            border-bottom: 1px solid rgba(71, 85, 105, 0.5);
+        }
+        
+        .time-entry:hover {
+            background: rgba(30, 41, 59, 0.5) !important;
+        }
+        
+        .dropdown-content {
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid var(--primary-color);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+        
+        .category-option:hover {
+            background: rgba(59, 130, 246, 0.2) !important;
+        }
+        
+        .active-category {
+            background: var(--primary-color) !important;
+        }
+        
+        .pb-alert {
+            animation: bounce 0.5s infinite alternate, glow 1.5s infinite alternate;
+        }
+        
+        @keyframes bounce {
+            from { transform: translateY(0) translateX(-50%); }
+            to { transform: translateY(-10px) translateX(-50%); }
+        }
+        
+        @keyframes glow {
+            from { box-shadow: 0 0 10px rgba(234, 179, 8, 0.5); }
+            to { box-shadow: 0 0 20px rgba(234, 179, 8, 0.8); }
+        }
+        
+        .compact-timer {
+            font-size: 4.5rem;
+        }
+        
+        @media (min-width: 768px) {
+            .compact-timer {
+                font-size: 6rem;
+            }
+        }
+        
+        .stats-card {
+            background: rgba(30, 41, 59, 0.5);
+            border-radius: 8px;
+            padding: 0.75rem;
+            transition: all 0.3s ease;
+        }
+        
+        .stats-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+        }
+        
+        .best-time {
+            position: relative;
+        }
+        
+        .best-time::after {
+            content: '★';
+            position: absolute;
+            right: -15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--accent-color);
+            font-size: 1.2rem;
+        }
+        
+        .inspection-timer {
+            font-family: 'Orbitron', monospace;
+            font-size: 2rem;
+            color: #f59e0b;
+            text-align: center;
+            margin: 10px 0;
+            transition: color 0.3s;
+        }
+        
+        .inspection-warning {
+            color: #ef4444;
+            animation: pulse 1s infinite;
+        }
+        
+        .settings-panel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 380px;
+            height: 100vh;
+            background: var(--panel-bg);
+            border-left: 1px solid var(--primary-color);
+            z-index: 100;
+            transition: right 0.3s ease;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .settings-panel.open {
+            right: 0;
+        }
+        
+        .settings-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 99;
+            display: none;
+        }
+        
+        .settings-overlay.active {
+            display: block;
+        }
+        
+        .color-picker {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        .color-option {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        
+        .color-option.selected {
+            border-color: white;
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 640px) {
+            .compact-timer {
+                font-size: 3.5rem;
+            }
+            
+            .timer-touch-area {
+                height: 100px;
+            }
+            
+            .settings-panel {
+                width: 100%;
+                max-width: 320px;
+            }
+            
+            /* Mejoras responsive específicas */
+            .main-container {
+                padding: 0.5rem;
+            }
+            
+            .grid-cols-2, .grid-cols-3 {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats-card {
+                padding: 0.5rem;
+            }
+            
+            .scramble-display {
+                font-size: 0.9rem;
+                padding: 0.5rem;
+            }
+            
+            .timer-display {
+                font-size: 3rem;
+            }
+            
+            .btn-primary, .btn-danger, .btn-training {
+                padding: 0.5rem 1rem;
+                font-size: 0.8rem;
+            }
+        }
+        
+        /* Soporte para modo horizontal en móviles */
+        @media screen and (min-width: 640px) and (max-height: 500px) and (orientation: landscape) {
+            .main-container {
+                padding: 0.5rem;
+                max-width: 100%;
+            }
+            
+            .grid-cols-1.lg\:grid-cols-3 {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 0.5rem;
+            }
+            
+            .timer-container {
+                padding: 0.5rem;
+            }
+            
+            .compact-timer {
+                font-size: 2.5rem;
+                margin-bottom: 0.5rem;
+            }
+            
+            .timer-touch-area {
+                height: 60px;
+                margin-bottom: 0.5rem;
+            }
+            
+            .stats-card {
+                padding: 0.25rem;
+            }
+            
+            .stats-card .text-2xl {
+                font-size: 1.25rem;
+            }
+        }
+            .disabled {
+                opacity: 0.6;
+                cursor: not-allowed;
+                pointer-events: none;
+        }
+        
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Audio elements for sounds -->
+    <audio id="timer-start-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-game-click-1114.mp3" preload="auto"></audio>
+    <audio id="timer-stop-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-jump-coin-216.mp3" preload="auto"></audio>
+    <audio id="inspection-warning-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3" preload="auto"></audio>
+    
+    <!-- Overlay para ajustes -->
+    <div class="settings-overlay" id="settings-overlay"></div>
+    
+    <!-- Panel de ajustes -->
+    <div class="settings-panel" id="settings-panel">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold">Ajustes</h2>
+            <button id="close-settings" class="text-gray-400 hover:text-white">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+        </div>
+        
+        <div class="mb-6">
+            <h3 class="font-semibold mb-3">Tiempo de inspección</h3>
+            <div class="flex flex-wrap gap-4">
+                <label class="inline-flex items-center">
+                    <input type="radio" name="inspection" value="0" class="mr-2" checked>
+                    Sin inspección
+                </label>
+                <label class="inline-flex items-center">
+                    <input type="radio" name="inspection" value="15" class="mr-2">
+                    15 segundos (WCA)
+                </label>
+            </div>
+        </div>
+        
+        <div class="mb-6">
+            <h3 class="font-semibold mb-3">Sonidos</h3>
+            <div class="flex flex-wrap gap-4">
+                <label class="inline-flex items-center">
+                    <input type="checkbox" id="sound-enabled" class="mr-2" checked>
+                    Habilitar sonidos
+                </label>
+                <label class="inline-flex items-center">
+                    <input type="checkbox" id="vibration-enabled" class="mr-2" checked>
+                    Habilitar vibración
+                </label>
+            </div>
+        </div>
+        
+        <div class="mb-6">
+            <h3 class="font-semibold mb-3">Color primario</h3>
+            <div class="color-picker">
+                <div class="color-option selected" data-color="#3b82f6" style="background-color: #3b82f6;"></div>
+                <div class="color-option" data-color="#10b981" style="background-color: #10b981;"></div>
+                <div class="color-option" data-color="#f59e0b" style="background-color: #f59e0b;"></div>
+                <div class="color-option" data-color="#ef4444" style="background-color: #ef4444;"></div>
+                <div class="color-option" data-color="#8b5cf6" style="background-color: #8b5cf6;"></div>
+            </div>
+        </div>
+        
+        <div class="mb-6">
+            <h3 class="font-semibold mb-3">Color de acento</h3>
+            <div class="color-picker">
+                <div class="color-option selected" data-accent="#f59e0b" style="background-color: #f59e0b;"></div>
+                <div class="color-option" data-accent="#3b82f6" style="background-color: #3b82f6;"></div>
+                <div class="color-option" data-accent="#10b981" style="background-color: #10b981;"></div>
+                <div class="color-option" data-accent="#ec4899" style="background-color: #ec4899;"></div>
+                <div class="color-option" data-accent="#6366f1" style="background-color: #6366f1;"></div>
+            </div>
+        </div>
+        
+        <div class="mb-6">
+            <h3 class="font-semibold mb-3">Tema oscuro/claro</h3>
+            <div class="flex flex-wrap gap-4">
+                <label class="inline-flex items-center">
+                    <input type="radio" name="theme" value="dark" class="mr-2" checked>
+                    Oscuro
+                </label>
+                <label class="inline-flex items-center">
+                    <input type="radio" name="theme" value="light" class="mr-2">
+                    Claro
+                </label>
+            </div>
+        </div>
+    </div>
+    
+    <div class="main-container container mx-auto px-4 py-6 max-w-6xl">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-6">
+            <div class="flex items-center">
+                <div class="logo">
+                    <div class="logo-icon"></div>
+                    <div class="logo-text">SpeedTimer</div>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <div class="dropdown relative">
+                    <button class="px-4 py-2 bg-gray-800 rounded-lg font-medium hover:bg-gray-700 transition flex items-center shadow" id="category-btn">
+                        <i class="fas fa-cube mr-2 text-blue-400"></i>
+                        <span id="current-category-display">3x3x3</span>
+                        <i class="fas fa-caret-down ml-2 text-blue-400"></i>
+                    </button>
+                    <div class="dropdown-content absolute right-0 mt-2 hidden w-48 z-10" id="category-dropdown">
+                        <a href="#" class="category-option active-category flex items-center px-4 py-2" data-category="333">
+                            <i class="fas fa-cube mr-2"></i>3x3x3
+                        </a>
+                        <a href="#" class="category-option flex items-center px-4 py-2" data-category="222">
+                            <i class="fas fa-th mr-2"></i>2x2x2
+                        </a>
+                        <a href="#" class="category-option flex items-center px-4 py-2" data-category="444">
+                            <i class="fas fa-th-large mr-2"></i>4x4x4
+                        </a>
+                        <a href="#" class="category-option flex items-center px-4 py-2" data-category="555">
+                            <i class="fas fa-th-large mr-2"></i>5x5x5
+                        </a>
+                        <a href="#" class="category-option flex items-center px-4 py-2" data-category="666">
+                            <i class="fas fa-th-large mr-2"></i>6x6x6
+                        </a>
+                        <a href="#" class="category-option flex items-center px-4 py-2" data-category="777">
+                            <i class="fas fa-th-large mr-2"></i>7x7x7
+                        </a>
+                        <div class="border-t border-gray-700 my-1"></div>
+                        <a href="#" class="category-option flex items-center px-4 py-2" data-category="333oh">
+                            <i class="fas fa-hand-paper mr-2"></i>3x3x3 OH
+                        </a>
+                        <a href="#" class="category-option flex items-center px-4 py-2" data-category="333bf">
+                            <i class="fas fa-blind mr-2"></i>3x3x3 BLD
+                        </a>
+                        <a href="#" class="category-option flex items-center px-4 py-2" data-category="333fm">
+                            <i class="fas fa-pen-fancy mr-2"></i>3x3x3 FM
+                        </a>
+                        <a href="#" class="category-option flex items-center px-4 py-2" data-category="333mbf">
+                            <i class="fas fa-brain mr-2"></i>3x3x3 MBLD
+                        </a>
+                        <div class="border-t border-gray-700 my-1"></div>
+                        <a href="#" class="category-option flex items-center px-4 py-2" data-category="minx">
+                            <i class="fas fa-star mr-2"></i>Megaminx
+                        </a>
+                        <a href="#" class="category-option flex items-center px-4 py-2" data-category="pyram">
+                            <i class="fas fa-play mr-2"></i>Pyraminx
+                        </a>
+                        <a href="#" class="category-option flex items-center px-4 py-2" data-category="skewb">
+                            <i class="fas fa-gem mr-2"></i>Skewb
+                        </a>
+                        <a href="#" class="category-option flex items-center px-4 py-2 disabled" data-category="sq1">
+                            <i class="fas fa-square mr-2"></i>Square-1 (proximamente)
+                        </a>
+                        <a href="#" class="category-option flex items-center px-4 py-2 disabled" data-category="clock">
+                            <i class="fas fa-clock mr-2"></i>Clock (proximamente)
+                        </a>
+                        <div class="border-t border-gray-700 my-1"></div>
+                        <a href="#" class="category-option flex items-center px-4 py-2" data-category="444bf">
+                            <i class="fas fa-blind mr-2"></i>4x4x4 BLD
+                        </a>
+                        <a href="#" class="category-option flex items-center px-4 py-2" data-category="555bf">
+                            <i class="fas fa-blind mr-2"></i>5x5x5 BLD
+                        </a>
+                    </div>
+                </div>
+                
+<!-- Menú desplegable de Entrenamiento -->
+<!-- Menú desplegable de Entrenamiento corregido -->
+<div class="dropdown relative">
+    <button class="btn-training px-4 py-2 rounded-lg font-semibold transition flex items-center" id="training-btn">
+        <i class="fas fa-tachometer-alt mr-2"></i>Entrenamiento
+        <i class="fas fa-caret-down ml-2"></i>
+    </button>
+    <div class="dropdown-content absolute right-0 mt-2 hidden w-48 z-10" id="training-dropdown">
+        <a href="entrenamiento.html" class="flex items-center px-4 py-2">
+            <i class="fas fa-cube mr-2"></i>3x3x3
+        </a>
+        <a href="entrenamiento2.html" class="flex items-center px-4 py-2">
+            <i class="fas fa-th mr-2"></i>2x2x2
+        </a>
+        <a href="entrenamiento4.html" class="flex items-center px-4 py-2">
+            <i class="fas fa-th-large mr-2"></i>4x4x4
+        </a>
+        <a href="entrenamiento5.html" class="flex items-center px-4 py-2">
+            <i class="fas fa-th-large mr-2"></i>5x5x5
+        </a>
+        <div class="border-t border-gray-700 my-1"></div>
+        <a href="entrenamiento_oh.html" class="flex items-center px-4 py-2 ">
+            <i class="fas fa-hand-paper mr-2"></i>3x3x3 OH 
+        </a>
+        <a href="entrenamiento_oh.html" class="flex items-center px-4 py-2 ">
+            <i class="fas fa-blind mr-2"></i>3x3x3 BLD 
+        </a>
+        <div class="border-t border-gray-700 my-1"></div>
+        <a href="entrenamiento_mega.html" class="flex items-center px-4 py-2">
+            <i class="fas fa-star mr-2"></i>Megaminx 
+        </a>
+        <a href="#" class="flex items-center px-4 py-2 disabled">
+            <i class="fas fa-play mr-2"></i>Pyraminx (próximamente)
+        </a>
+        <a href="#" class="flex items-center px-4 py-2 disabled">
+            <i class="fas fa-gem mr-2"></i>Skewb (próximamente)
+        </a>
+        <a href="#" class="flex items-center px-4 py-2 disabled">
+            <i class="fas fa-square mr-2"></i>Square-1 (próximamente)
+        </a>
+    </div>
+</div>
+
+                
+                <button id="settings-btn" class="p-2 rounded-lg hover:bg-gray-700 transition">
+                    <i class="fas fa-cog text-xl"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-6">
+            <!-- Left Column (Timer + History) -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Timer -->
+                <div class="timer-container panel p-6 flex flex-col items-center">
+                    <div class="timer-display compact-timer font-bold mb-6 text-center timer-red" id="timer">0.00</div>
+                    <div class="inspection-timer hidden" id="inspection-timer">15</div>
+                    
+                    <div class="w-full h-28 timer-touch-area rounded-xl flex items-center justify-center mb-6 cursor-pointer transition-all"
+                         id="timer-touch-area">
+                        <div class="text-sm md:text-base text-gray-300 text-center px-4" id="timer-instruction">
+                            Presiona la barra espaciadora<br>o toca aquí para comenzar
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-3 w-full justify-center">
+                        <button class="btn-danger px-5 py-2.5 rounded-lg font-semibold transition text-sm flex items-center" id="reset-btn">
+                            <i class="fas fa-undo mr-2"></i>Reiniciar
+                        </button>
+                        <button class="btn-primary px-5 py-2.5 rounded-lg font-semibold transition text-sm flex items-center" id="new-scramble-btn">
+                            <i class="fas fa-random mr-2"></i>Nuevo Scramble
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- History -->
+                <div class="panel p-5">
+                    <div class="flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-semibold text-blue-400">
+                            <i class="fas fa-history mr-2"></i>Historial de Tiempos
+                        </h3>
+                        <button id="clear-times" class="text-xs text-red-400 hover:text-red-300 flex items-center">
+                            <i class="fas fa-trash mr-1"></i>Borrar
+                        </button>
+                    </div>
+                    <div class="scrollable-history max-h-64 overflow-y-auto pr-2" id="times-list">
+                        <div class="text-center text-gray-400 py-6">
+                            <i class="fas fa-clock text-2xl mb-2"></i>
+                            <div>No hay tiempos registrados</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column (Stats + Scramble + Chart) -->
+            <div class="space-y-6">
+                <!-- Stats -->
+                <div class="panel p-5">
+                    <h3 class="text-lg font-semibold text-blue-400 mb-4 text-center">
+                        <i class="fas fa-chart-bar mr-2"></i>Estadísticas
+                    </h3>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="stats-card">
+                            <div class="text-xs text-gray-400 uppercase tracking-wider">Actual</div>
+                            <div class="text-2xl font-bold mt-1" id="current-time">-</div>
+                        </div>
+                        <div class="stats-card best-time">
+                            <div class="text-xs text-gray-400 uppercase tracking-wider">Mejor</div>
+                            <div class="text-2xl font-bold mt-1" id="best-time">-</div>
+                        </div>
+                        <div class="stats-card">
+                            <div class="text-xs text-gray-400 uppercase tracking-wider">Avg de 5</div>
+                            <div class="text-2xl font-bold mt-1" id="avg5-time">-</div>
+                        </div>
+                        <div class="stats-card">
+                            <div class="text-xs text-gray-400 uppercase tracking-wider">Avg de 12</div>
+                            <div class="text-2xl font-bold mt-1" id="avg12-time">-</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Scramble -->
+                <div class="panel p-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="text-lg font-semibold text-blue-400">
+                            <i class="fas fa-random mr-2"></i>Scramble
+                        </h3>
+                        <span class="text-xs bg-gray-700 text-blue-400 px-2 py-1 rounded-full" id="current-category">3x3x3</span>
+                    </div>
+                    <div class="scramble-display p-3 rounded-lg text-center text-sm md:text-base leading-relaxed" id="scramble"></div>
+                </div>
+
+                <!-- Chart -->
+                <div class="panel p-5">
+                    <h3 class="text-lg font-semibold text-blue-400 mb-3 text-center">
+                        <i class="fas fa-chart-line mr-2"></i>Progreso
+                    </h3>
+                    <div class="h-48">
+                        <canvas id="times-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Variables
+            let timerInterval;
+            let inspectionInterval;
+            let startTime;
+            let running = false;
+            let ready = false;
+            let inspecting = false;
+            let times = JSON.parse(localStorage.getItem('speedcube-times')) || [];
+            let currentCategory = '333';
+            let currentScramble = generateScramble(currentCategory);
+            let holdingTimer = false;
+            let timesChart = null;
+            let inspectionTime = localStorage.getItem('inspection-time') || '0';
+            let primaryColor = localStorage.getItem('primary-color') || '#3b82f6';
+            let accentColor = localStorage.getItem('accent-color') || '#f59e0b';
+            let theme = localStorage.getItem('theme') || 'dark';
+            let soundEnabled = localStorage.getItem('sound-enabled') !== 'false';
+            let vibrationEnabled = localStorage.getItem('vibration-enabled') !== 'false';
+            
+            // Audio elements
+            const timerStartSound = document.getElementById('timer-start-sound');
+            const timerStopSound = document.getElementById('timer-stop-sound');
+            const inspectionWarningSound = document.getElementById('inspection-warning-sound');
+            
+            // Configuración inicial
+            document.querySelector(`input[name="inspection"][value="${inspectionTime}"]`).checked = true;
+            document.querySelector(`input[name="theme"][value="${theme}"]`).checked = true;
+            document.getElementById('sound-enabled').checked = soundEnabled;
+            document.getElementById('vibration-enabled').checked = vibrationEnabled;
+            updateColors();
+            
+            // DOM Elements
+            const timerDisplay = document.getElementById('timer');
+            const inspectionTimer = document.getElementById('inspection-timer');
+            const timerTouchArea = document.getElementById('timer-touch-area');
+            const timerInstruction = document.getElementById('timer-instruction');
+            const scrambleDisplay = document.getElementById('scramble');
+            const resetBtn = document.getElementById('reset-btn');
+            const newScrambleBtn = document.getElementById('new-scramble-btn');
+            const currentTimeDisplay = document.getElementById('current-time');
+            const bestTimeDisplay = document.getElementById('best-time');
+            const avg5TimeDisplay = document.getElementById('avg5-time');
+            const avg12TimeDisplay = document.getElementById('avg12-time');
+            const timesList = document.getElementById('times-list');
+            const clearTimesBtn = document.getElementById('clear-times');
+            const categoryOptions = document.querySelectorAll('.category-option');
+            const currentCategoryDisplay = document.getElementById('current-category');
+            const currentCategoryDisplayMain = document.getElementById('current-category-display');
+            const categoryDropdown = document.getElementById('category-dropdown');
+            const categoryBtn = document.getElementById('category-btn');
+            const settingsBtn = document.getElementById('settings-btn');
+            const settingsPanel = document.getElementById('settings-panel');
+            const settingsOverlay = document.getElementById('settings-overlay');
+            const closeSettingsBtn = document.getElementById('close-settings');
+            const colorOptions = document.querySelectorAll('.color-option');
+            const soundToggle = document.getElementById('sound-enabled');
+            const vibrationToggle = document.getElementById('vibration-enabled');
+            
+            // Initialize
+            updateScrambleDisplay();
+            updateStats();
+            renderTimesList();
+            initTimesChart();
+            
+            // Event Listeners
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('keyup', handleKeyUp);
+            timerTouchArea.addEventListener('mousedown', handleTouchStart);
+            timerTouchArea.addEventListener('touchstart', handleTouchStart);
+            timerTouchArea.addEventListener('mouseup', handleTouchEnd);
+            timerTouchArea.addEventListener('touchend', handleTouchEnd);
+            resetBtn.addEventListener('click', resetTimer);
+            newScrambleBtn.addEventListener('click', () => generateNewScramble(currentCategory));
+            clearTimesBtn.addEventListener('click', clearAllTimes);
+            settingsBtn.addEventListener('click', toggleSettings);
+            closeSettingsBtn.addEventListener('click', toggleSettings);
+            settingsOverlay.addEventListener('click', toggleSettings);
+            
+            // Delegación de eventos para elementos dinámicos
+            timesList.addEventListener('click', function(e) {
+                const penaltyBtn = e.target.closest('.penalty-btn');
+                const deleteBtn = e.target.closest('.delete-btn');
+                const timeEntry = e.target.closest('.time-entry');
+                
+                if (penaltyBtn) {
+                    e.stopPropagation();
+                    const index = parseInt(penaltyBtn.getAttribute('data-index'));
+                    const penalty = penaltyBtn.getAttribute('data-penalty');
+                    applyPenalty(index, penalty);
+                } else if (deleteBtn) {
+                    e.stopPropagation();
+                    const index = parseInt(deleteBtn.getAttribute('data-index'));
+                    deleteTimeEntry(index);
+                } else if (timeEntry) {
+                    const index = parseInt(timeEntry.querySelector('.penalty-btn').getAttribute('data-index'));
+                    const categoryTimes = times.filter(t => t.category === currentCategory);
+                    if (categoryTimes[index]) {
+                        showScrambleForTime(categoryTimes[index].scramble);
+                    }
+                }
+            });
+            
+            // Configuración de ajustes
+            document.querySelectorAll('input[name="inspection"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    inspectionTime = this.value;
+                    localStorage.setItem('inspection-time', inspectionTime);
+                });
+            });
+            
+            document.querySelectorAll('input[name="theme"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    theme = this.value;
+                    localStorage.setItem('theme', theme);
+                    applyTheme();
+                });
+            });
+            
+            soundToggle.addEventListener('change', function() {
+                soundEnabled = this.checked;
+                localStorage.setItem('sound-enabled', soundEnabled);
+            });
+            
+            vibrationToggle.addEventListener('change', function() {
+                vibrationEnabled = this.checked;
+                localStorage.setItem('vibration-enabled', vibrationEnabled);
+            });
+            
+            colorOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    if (this.parentElement.querySelector('h3').textContent.includes('primario')) {
+                        primaryColor = this.getAttribute('data-color');
+                        localStorage.setItem('primary-color', primaryColor);
+                    } else {
+                        accentColor = this.getAttribute('data-accent');
+                        localStorage.setItem('accent-color', accentColor);
+                    }
+                    
+                    // Update selected state
+                    this.parentElement.querySelectorAll('.color-option').forEach(opt => {
+                        opt.classList.remove('selected');
+                    });
+                    this.classList.add('selected');
+                    
+                    updateColors();
+                    if (timesChart) {
+                        updateChartColors();
+                    }
+                });
+            });
+            
+//  Obtener referencias a los elementos del menú de entrenamiento
+const trainingBtn = document.getElementById('training-btn');
+    const trainingDropdown = document.getElementById('training-dropdown');
+    
+    // Manejo de clics en las opciones de ENTRENAMIENTO
+    const trainingOptions = document.querySelectorAll('#training-dropdown .category-option:not(.disabled)');
+    trainingOptions.forEach(option => {
+        option.addEventListener('click', function(e) {
+            if (this.classList.contains('disabled')) {
+                e.preventDefault();
+                return;
+            }
+            // Permitir la navegación normal para los enlaces de entrenamiento
+            categoryDropdown.style.display = 'none';
+            trainingDropdown.style.display = 'none';
+        });
+    });
+
+    // Mostrar/ocultar menús
+    categoryBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        trainingDropdown.style.display = 'none';
+        categoryDropdown.style.display = categoryDropdown.style.display === 'block' ? 'none' : 'block';
+    });
+
+    trainingBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        categoryDropdown.style.display = 'none';
+        trainingDropdown.style.display = trainingDropdown.style.display === 'block' ? 'none' : 'block';
+    });
+
+    // Cerrar menús al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        if (!categoryDropdown.contains(e.target) && e.target !== categoryBtn) {
+            categoryDropdown.style.display = 'none';
+        }
+        if (!trainingDropdown.contains(e.target) && e.target !== trainingBtn) {
+            trainingDropdown.style.display = 'none';
+        }
+    });
+
+    // Category selection
+    categoryOptions.forEach(option => {
+        option.addEventListener('click', function(e) {
+            e.preventDefault();
+            // Update active option
+            categoryOptions.forEach(o => o.classList.remove('active-category'));
+            this.classList.add('active-category');
+            // Update current category
+            currentCategory = this.dataset.category;
+            currentCategoryDisplay.textContent = getCategoryName(currentCategory);
+            currentCategoryDisplayMain.textContent = getCategoryName(currentCategory);
+            // Close dropdown
+            categoryDropdown.style.display = 'none';
+            // Generate new scramble for this category
+            generateNewScramble(currentCategory);
+            // Update stats and times list for the new category
+            updateStats();
+            renderTimesList();
+            updateChartData();
+        });
+    });
+            
+            // Functions
+            function toggleSettings() {
+                settingsPanel.classList.toggle('open');
+                settingsOverlay.classList.toggle('active');
+            }
+            
+            function updateColors() {
+                document.documentElement.style.setProperty('--primary-color', primaryColor);
+                document.documentElement.style.setProperty('--accent-color', accentColor);
+                
+                // Update all elements that use these colors
+                document.querySelectorAll('.btn-primary').forEach(el => {
+                    el.style.backgroundColor = primaryColor;
+                    el.style.boxShadow = `0 4px 6px -1px ${hexToRgba(primaryColor, 0.3)}`;
+                });
+                
+                document.querySelectorAll('.text-blue-400').forEach(el => {
+                    el.style.color = primaryColor;
+                });
+            }
+            
+            function hexToRgba(hex, alpha) {
+                const r = parseInt(hex.slice(1, 3), 16);
+                const g = parseInt(hex.slice(3, 5), 16);
+                const b = parseInt(hex.slice(5, 7), 16);
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            }
+            
+            function applyTheme() {
+                if (theme === 'light') {
+                    document.documentElement.style.setProperty('--panel-bg', 'rgba(255, 255, 255, 0.8)');
+                    document.documentElement.style.setProperty('--secondary-color', '#f1f5f9');
+                    document.documentElement.style.setProperty('--text-color', '#1e293b');
+                } else {
+                    document.documentElement.style.setProperty('--panel-bg', 'rgba(15, 23, 42, 0.8)');
+                    document.documentElement.style.setProperty('--secondary-color', '#1e293b');
+                    document.documentElement.style.setProperty('--text-color', '#ffffff');
+                }
+            }
+            
+            function playSound(audioElement) {
+                if (soundEnabled) {
+                    audioElement.currentTime = 0;
+                    audioElement.play().catch(e => console.log('Audio play error:', e));
+                }
+            }
+            
+            function vibrate(pattern) {
+                if (vibrationEnabled && 'vibrate' in navigator) {
+                    navigator.vibrate(pattern);
+                }
+            }
+            
+            function handleKeyDown(e) {
+                if (e.code === 'Space' || e.key === ' ') {
+                    e.preventDefault();
+                    
+                    // Prevent double triggers
+                    if (holdingTimer) return;
+                    
+                    if (!running && !ready && !inspecting) {
+                        if (inspectionTime === '15') {
+                            startInspection();
+                        } else {
+                            prepareTimer();
+                        }
+                    }
+                    holdingTimer = true;
+                }
+            }
+            
+            function handleKeyUp(e) {
+                if (e.code === 'Space' || e.key === ' ') {
+                    e.preventDefault();
+                    
+                    if (!holdingTimer) return;
+                    
+                    if (running) {
+                        stopTimer();
+                    } else if (ready && !inspecting) {
+                        startTimer();
+                    } else if (inspecting) {
+                        stopInspection();
+                    }
+                    
+                    holdingTimer = false;
+                } else if (running) {
+                    // Detener el timer con cualquier tecla cuando está corriendo
+                    stopTimer();
+                }
+            }
+            
+            function handleTouchStart(e) {
+                e.preventDefault();
+                if (holdingTimer) return;
+                
+                if (!running && !ready && !inspecting) {
+                    if (inspectionTime === '15') {
+                        startInspection();
+                    } else {
+                        prepareTimer();
+                    }
+                }
+                holdingTimer = true;
+            }
+            
+            function handleTouchEnd(e) {
+                e.preventDefault();
+                if (!holdingTimer) return;
+                
+                if (running) {
+                    stopTimer();
+                } else if (ready && !inspecting) {
+                    startTimer();
+                } else if (inspecting) {
+                    stopInspection();
+                }
+                
+                holdingTimer = false;
+            }
+            
+            function startInspection() {
+                inspecting = true;
+                let timeLeft = 15;
+                inspectionTimer.textContent = timeLeft;
+                inspectionTimer.classList.remove('hidden');
+                timerInstruction.textContent = 'Inspección en curso...';
+                
+                inspectionInterval = setInterval(() => {
+                    timeLeft--;
+                    inspectionTimer.textContent = timeLeft;
+                    
+                    if (timeLeft <= 8) {
+                        inspectionTimer.classList.add('inspection-warning');
+                        if (timeLeft === 8) {
+                            playSound(inspectionWarningSound);
+                            vibrate(200);
+                        }
+                    }
+                    
+                    if (timeLeft <= 0) {
+                        stopInspection(true);
+                    }
+                }, 1000);
+            }
+            
+            function stopInspection(timeout = false) {
+                inspecting = false;
+                clearInterval(inspectionInterval);
+                inspectionTimer.classList.add('hidden');
+                inspectionTimer.classList.remove('inspection-warning');
+                inspectionTimer.style.color = '#f59e0b';
+                
+                if (timeout) {
+                    timerInstruction.textContent = '¡Tiempo! (+2 segundos)';
+                    setTimeout(() => {
+                        prepareTimer(true);
+                    }, 500);
+                } else {
+                    prepareTimer();
+                }
+            }
+            
+            function prepareTimer(penalty = false) {
+                ready = true;
+                timerDisplay.classList.remove('timer-red', 'timer-normal');
+                timerDisplay.classList.add('timer-green');
+                timerDisplay.textContent = penalty ? '+2' : '0.00';
+                timerTouchArea.classList.add('ready-state');
+                timerInstruction.textContent = 'Mantén presionado... Suelta para iniciar';
+            }
+            
+            function startTimer() {
+                running = true;
+                ready = false;
+                holdingTimer = false;
+                startTime = Date.now();
+                timerInterval = setInterval(updateTimer, 10);
+                timerTouchArea.classList.remove('ready-state');
+                timerDisplay.classList.remove('timer-green');
+                timerDisplay.classList.add('timer-normal');
+                timerInstruction.textContent = 'Presiona cualquier tecla para detener';
+                timerTouchArea.classList.add('bg-gray-700');
+                
+                playSound(timerStartSound);
+                vibrate(50);
+                
+                document.addEventListener('keydown', stopTimerOnKey);
+            }
+            
+            function stopTimerOnKey(e) {
+                if (running) {
+                    e.preventDefault();
+                    stopTimer();
+                }
+            }
+            
+            function stopTimer() {
+                running = false;
+                clearInterval(timerInterval);
+                timerTouchArea.classList.remove('bg-gray-700');
+                
+                const endTime = Date.now();
+                let elapsedTime = (endTime - startTime) / 1000;
+                
+                // Aplicar penalización +2 si el tiempo de inspección se acabó
+                if (timerDisplay.textContent === '+2') {
+                    elapsedTime += 2;
+                }
+                
+                const timeEntry = {
+                    time: elapsedTime,
+                    scramble: currentScramble,
+                    date: new Date().toISOString(),
+                    category: currentCategory,
+                    penalty: timerDisplay.textContent === '+2' ? '+2' : undefined
+                };
+                
+                // Check for new PB
+                const categoryTimes = times.filter(t => t.category === currentCategory);
+                if (categoryTimes.length > 0) {
+                    const validTimes = categoryTimes.filter(t => t.penalty !== 'DNF').map(t => {
+                        return t.penalty === '+2' ? t.time + 2 : t.time;
+                    });
+                    const previousBest = validTimes.length > 0 ? Math.min(...validTimes) : Infinity;
+                    
+                    if (elapsedTime < previousBest) {
+                        showPBAlert(elapsedTime);
+                    }
+                }
+                
+                times.unshift(timeEntry);
+                if (times.length > 1000) times = times.slice(0, 1000);
+                
+                localStorage.setItem('speedcube-times', JSON.stringify(times));
+                
+                updateStats();
+                renderTimesList();
+                updateChartData();
+                
+                generateNewScramble(currentCategory);
+                
+                timerInstruction.textContent = 'Presiona la barra espaciadora\n o toca aquí para comenzar';
+                timerDisplay.classList.remove('timer-normal');
+                timerDisplay.classList.add('timer-red');
+                
+                playSound(timerStopSound);
+                vibrate(100);
+                
+                document.removeEventListener('keydown', stopTimerOnKey);
+            }
+            
+            function resetTimer() {
+                running = false;
+                ready = false;
+                inspecting = false;
+                holdingTimer = false;
+                clearInterval(timerInterval);
+                clearInterval(inspectionInterval);
+                timerDisplay.textContent = '0.00';
+                timerDisplay.classList.remove('timer-green', 'timer-normal');
+                timerDisplay.classList.add('timer-red');
+                timerTouchArea.classList.remove('ready-state', 'bg-gray-700');
+                inspectionTimer.classList.add('hidden');
+                inspectionTimer.classList.remove('inspection-warning');
+                inspectionTimer.style.color = '#f59e0b';
+                timerInstruction.textContent = 'Presiona la barra espaciadora\n o toca aquí para comenzar';
+                
+                document.removeEventListener('keydown', stopTimerOnKey);
+            }
+            
+            function updateTimer() {
+                const elapsedTime = (Date.now() - startTime) / 1000;
+                timerDisplay.textContent = elapsedTime.toFixed(2);
+            }
+            
+            // ===== GENERADORES DE SCRAMBLE MEJORADOS =====
+            function generateScramble(category) {
+                if (category === '333' || !category) {
+                    return generate3x3Scramble();
+                }
+                else if (category === '222') {
+                    return generate2x2Scramble();
+                }
+                else if (category === '444') {
+                    return generate4x4Scramble();
+                }
+                else if (category === '555') {
+                    return generate5x5Scramble();
+                }
+                else if (category === '666') {
+                    return generate6x6Scramble();
+                }
+                else if (category === '777') {
+                    return generate7x7Scramble();
+                }
+                else if (category === '333bf' || category === '333oh') {
+                    return generate3x3Scramble();
+                }
+                else if (category === '333fm') {
+                    return "Fewest Moves - Sin scramble generado";
+                }
+                else if (category === 'clock') {
+                    return generateClockScramble();
+                }
+                else if (category === 'minx') {
+                    return generateMegaminxScramble();
+                }
+                else if (category === 'pyram') {
+                    return generatePyraminxScramble();
+                }
+                else if (category === 'skewb') {
+                    return generateSkewbScramble();
+                }
+                else if (category === 'sq1') {
+                    return generateSquare1Scramble();
+                }
+                else if (category === '444bf' || category === '555bf') {
+                    return "BLD - Usa scrambles oficiales";
+                }
+                else if (category === '333mbf') {
+                    return "MBLD - Usa scrambles oficiales";
+                }
+                else {
+                    return "Scramble no disponible para esta categoría";
+                }
+            }
+            
+            function generate3x3Scramble() {
+                const faces = ['U', 'D', 'F', 'B', 'R', 'L'];
+                const modifiers = ['', "'", '2'];
+                const scramble = [];
+                let lastFace = '';
+                
+                for (let i = 0; i < 20; i++) {
+                    let face, modifier;
+                    do {
+                        face = faces[Math.floor(Math.random() * faces.length)];
+                        modifier = modifiers[Math.floor(Math.random() * modifiers.length)];
+                    } while (
+                        face === lastFace || // No misma cara consecutiva
+                        (i > 0 && isOppositeFace(face, lastFace)) // No caras opuestas consecutivas
+                    );
+                    
+                    scramble.push(face + modifier);
+                    lastFace = face;
+                }
+                
+                return scramble.join(' ');
+            }
+    
+            function isOppositeFace(face1, face2) {
+                const oppositePairs = {
+                    'U': 'D', 'D': 'U',
+                    'F': 'B', 'B': 'F',
+                    'R': 'L', 'L': 'R'
+                };
+                return oppositePairs[face1] === face2;
+            }
+            
+            function generate2x2Scramble() {
+                const faces = ['U', 'F', 'R'];
+                const modifiers = ['', "'", '2'];
+                const scramble = [];
+                let lastFace = '';
+                
+                for (let i = 0; i < 10; i++) {
+                    let face, modifier;
+                    do {
+                        face = faces[Math.floor(Math.random() * faces.length)];
+                        modifier = modifiers[Math.floor(Math.random() * modifiers.length)];
+                    } while (face === lastFace);
+                    
+                    scramble.push(face + modifier);
+                    lastFace = face;
+                }
+                
+                return scramble.join(' ');
+            }
+            
+            function generate4x4Scramble() {
+                const faces = ['U', 'D', 'F', 'B', 'R', 'L'];
+                const modifiers = ['', "'", '2'];
+                const wideModifiers = ['w', 'w\'', 'w2'];
+                const scramble = [];
+                let lastFace = '';
+                
+                for (let i = 0; i < 40; i++) {
+                    let face, modifier;
+                    let isWide = Math.random() > 0.5; // 50% de probabilidad de ser wide move
+                    
+                    do {
+                        face = faces[Math.floor(Math.random() * faces.length)];
+                        modifier = isWide 
+                            ? wideModifiers[Math.floor(Math.random() * wideModifiers.length)]
+                            : modifiers[Math.floor(Math.random() * modifiers.length)];
+                    } while (face === lastFace);
+                    
+                    scramble.push(face + modifier);
+                    lastFace = face;
+                }
+                
+                return scramble.join(' ');
+            }
+            
+            function generate5x5Scramble() {
+                const faces = ['U', 'D', 'F', 'B', 'R', 'L'];
+                const modifiers = ['', "'", '2'];
+                const wideModifiers = ['w', 'w\'', 'w2'];
+                const scramble = [];
+                let lastFace = '';
+                
+                for (let i = 0; i < 60; i++) {
+                    let face, modifier;
+                    let isWide = Math.random() > 0.5; // 50% de probabilidad de ser wide move
+                    
+                    do {
+                        face = faces[Math.floor(Math.random() * faces.length)];
+                        modifier = isWide 
+                            ? wideModifiers[Math.floor(Math.random() * wideModifiers.length)]
+                            : modifiers[Math.floor(Math.random() * modifiers.length)];
+                    } while (face === lastFace);
+                    
+                    scramble.push(face + modifier);
+                    lastFace = face;
+                }
+                
+                return scramble.join(' ');
+            }
+            
+            function generate6x6Scramble() {
+                const faces = ['U', 'D', 'F', 'B', 'R', 'L'];
+                const modifiers = ['', "'", '2'];
+                const wideModifiers = ['w', 'w\'', 'w2'];
+                const tripleWideModifiers = ['3w', '3w\'', '3w2'];
+                const scramble = [];
+                let lastFace = '';
+                
+                for (let i = 0; i < 80; i++) {
+                    let face, modifier;
+                    let moveType = Math.random();
+                    
+                    do {
+                        face = faces[Math.floor(Math.random() * faces.length)];
+                        if (moveType < 0.4) {
+                            modifier = modifiers[Math.floor(Math.random() * modifiers.length)];
+                        } else if (moveType < 0.8) {
+                            modifier = wideModifiers[Math.floor(Math.random() * wideModifiers.length)];
+                        } else {
+                            modifier = tripleWideModifiers[Math.floor(Math.random() * tripleWideModifiers.length)];
+                        }
+                    } while (face === lastFace);
+                    
+                    scramble.push(face + modifier);
+                    lastFace = face;
+                }
+                
+                return scramble.join(' ');
+            }
+            
+            function generate7x7Scramble() {
+                const faces = ['U', 'D', 'F', 'B', 'R', 'L'];
+                const modifiers = ['', "'", '2'];
+                const wideModifiers = ['w', 'w\'', 'w2'];
+                const tripleWideModifiers = ['3w', '3w\'', '3w2'];
+                const scramble = [];
+                let lastFace = '';
+                
+                for (let i = 0; i < 100; i++) {
+                    let face, modifier;
+                    let moveType = Math.random();
+                    
+                    do {
+                        face = faces[Math.floor(Math.random() * faces.length)];
+                        if (moveType < 0.4) {
+                            modifier = modifiers[Math.floor(Math.random() * modifiers.length)];
+                        } else if (moveType < 0.8) {
+                            modifier = wideModifiers[Math.floor(Math.random() * wideModifiers.length)];
+                        } else {
+                            modifier = tripleWideModifiers[Math.floor(Math.random() * tripleWideModifiers.length)];
+                        }
+                    } while (face === lastFace);
+                    
+                    scramble.push(face + modifier);
+                    lastFace = face;
+                }
+                
+                return scramble.join(' ');
+            }
+            
+            function generateClockScramble() {
+    // const dials = ["UR", "DR", "DL", "UL", "U", "R", "D", "L", "ALL"]; // No se usa directamente, se usan las listas ordenadas
+    const moves = [];
+    const turns = ["1+", "2+", "3+", "4+", "5+", "6+", "1-", "2-", "3-", "4-", "5-", "6-"];
+
+    function getRandomPins() {
+        // Genera un estado aleatorio para los 4 grupos de pines de esquina (UR, DR, DL, UL)
+        // 'u' para arriba, 'd' para abajo.
+        let pinStates = "";
+        for (let i = 0; i < 4; i++) {
+            pinStates += Math.random() < 0.5 ? "u" : "d";
+        }
+        // Formato: URx DRx DLx ULx (donde x es u o d)
+        return `UR${pinStates[0]} DR${pinStates[1]} DL${pinStates[2]} UL${pinStates[3]}`;
+    }
+
+    function getRandomTurn() {
+        return turns[Math.floor(Math.random() * turns.length)];
+    }
+
+    // 1. Primeros 9 movimientos (cara frontal inicial)
+    // Orden WCA común: UR, DR, DL, UL, U, R, D, L, ALL
+    const frontDialsOrder = ["UR", "DR", "DL", "UL", "U", "R", "D", "L", "ALL"];
+    for (const dial of frontDialsOrder) {
+        // Para todos estos diales, se especifican los 4 pines de las esquinas.
+        // La condición 'if' anterior era redundante ya que todos los elementos de frontDialsOrder
+        // requerían la configuración de pines.
+        const pinsToSet = getRandomPins();
+        moves.push(`${pinsToSet} ${dial}${getRandomTurn()}`);
+    }
+
+    // 2. Rotación y2
+    moves.push("y2");
+
+    // 3. Últimos 4 movimientos (cara que era trasera, ahora frontal)
+    // Orden WCA común: U, R, D, L
+    const backDialsOrder = ["U", "R", "D", "L"];
+    for (const dial of backDialsOrder) {
+        const pinsToSet = getRandomPins();
+        moves.push(`${pinsToSet} ${dial}${getRandomTurn()}`);
+    }
+
+    return moves.join(" ");
+}
+
+// Ejemplo de uso:
+// console.log("Clock Scramble:", generateClockScrambleWCA());
+            
+            function generateMegaminxScramble() {
+    const faces = ["R++", "R--", "D++", "D--"]; // Movimientos básicos
+    const uMoves = ["U", "U'"]; // Solo U o U' al final
+    
+    let scramble = [];
+    let lastMove = "";
+    
+    // Generar exactamente 70 movimientos de caras (7 bloques de 10)
+    for (let i = 0; i < 70; i++) {
+        let move;
+        let attempts = 0;
+        const maxAttempts = 20; // Para evitar bucles infinitos
+        
+        do {
+            move = faces[Math.floor(Math.random() * faces.length)];
+            attempts++;
+            
+            // Si hemos intentado demasiado, forzamos un movimiento diferente
+            if (attempts >= maxAttempts) {
+                move = faces.find(m => m !== lastMove) || move;
+                break;
+            }
+            
+        } while (
+            // Evitar movimientos consecutivos que se cancelen
+            (move === "R++" && lastMove === "R--") ||
+            (move === "R--" && lastMove === "R++") ||
+            (move === "D++" && lastMove === "D--") ||
+            (move === "D--" && lastMove === "D++") ||
+            // Evitar repetir el mismo movimiento 3 veces seguidas
+            (move === lastMove && 
+             scramble.length >= 2 && 
+             scramble[scramble.length-2] === move)
+        );
+        
+        scramble.push(move);
+        lastMove = move;
+    }
+    
+    // Añadir rotación U/U' al final del scramble completo
+    const finalUMove = uMoves[Math.floor(Math.random() * uMoves.length)];
+    scramble.push(finalUMove);
+    
+    return scramble.join(' ');
+}
+            
+            function generatePyraminxScramble() {
+                const tips = ["U", "L", "R", "B"];
+                const tipModifiers = ["", "'"];
+                const edges = ["u", "l", "r", "b"];
+                const edgeModifiers = ["", "'"];
+                const scramble = [];
+                
+                // Movimientos de puntas (1-4 puntas)
+                const tipMoves = [];
+                for (const tip of tips) {
+                    if (Math.random() > 0.5) { // 50% de probabilidad por punta
+                        const modifier = tipModifiers[Math.floor(Math.random() * tipModifiers.length)];
+                        tipMoves.push(tip + modifier);
+                    }
+                }
+                
+                // Movimientos de aristas (6-8)
+                const edgeMoves = [];
+                let lastEdge = '';
+                const edgeCount = 6 + Math.floor(Math.random() * 3);
+                
+                for (let i = 0; i < edgeCount; i++) {
+                    let edge, modifier;
+                    do {
+                        edge = edges[Math.floor(Math.random() * edges.length)];
+                        modifier = edgeModifiers[Math.floor(Math.random() * edgeModifiers.length)];
+                    } while (edge === lastEdge);
+                    
+                    edgeMoves.push(edge + modifier);
+                    lastEdge = edge;
+                }
+                
+                // Mezclar puntas y aristas
+                while (tipMoves.length > 0 || edgeMoves.length > 0) {
+                    if (tipMoves.length > 0 && (edgeMoves.length === 0 || Math.random() > 0.5)) {
+                        scramble.push(tipMoves.shift());
+                    } else {
+                        scramble.push(edgeMoves.shift());
+                    }
+                }
+                
+                return scramble.join(' ');
+            }
+            
+            function generateSkewbScramble() {
+                const faces = ["B", "L", "R", "U"];
+                const modifiers = ["", "'"];
+                const scramble = [];
+                let lastFace = '';
+                
+                for (let i = 0; i < 10; i++) {
+                    let face, modifier;
+                    
+                    do {
+                        face = faces[Math.floor(Math.random() * faces.length)];
+                        modifier = modifiers[Math.floor(Math.random() * modifiers.length)];
+                    } while (face === lastFace);
+                    
+                    scramble.push(face + modifier);
+                    lastFace = face;
+                }
+                
+                return scramble.join(' ');
+            }
+            
+            function generateSquare1Scramble() {
+  const moves = [];
+  let top = 0;
+  let bottom = 0;
+
+  const isValid = (t, b) => {
+    if (t === 0 && b === 0) return false;
+    const newTop = (top + t + 12) % 12;
+    const newBottom = (bottom + b + 12) % 12;
+    const topAligned = newTop % 3 === 0;
+    const bottomAligned = newBottom % 3 === 0;
+    return topAligned === bottomAligned;
+  };
+
+  for (let i = 0; i < 12; i++) {
+    let t, b;
+    let attempts = 0;
+    do {
+      t = Math.floor(Math.random() * 12) - 5; // Rango de -5 a 6
+      b = Math.floor(Math.random() * 12) - 5;
+      attempts++;
+    } while (!isValid(t, b) && attempts < 100);
+
+    if (attempts >= 100) {
+      // Fallback en caso de no encontrar un movimiento válido
+      t = 0;
+      b = 3;
+    }
+
+    moves.push(`(${t},${b})`);
+    moves.push('/');
+
+    top = (top + t + 12) % 12;
+    bottom = (bottom + b + 12) % 12;
+  }
+
+  // Eliminar la última barra si no es necesaria
+  if (moves[moves.length - 1] === '/') {
+    moves.pop();
+  }
+
+  return moves.join(' ');
+}
+
+// Ejemplo de uso:
+// console.log("Square-1 Scramble:", generateSquare1ScrambleWCA());
+            
+            function generateNewScramble(category) {
+                currentScramble = generateScramble(category);
+                updateScrambleDisplay();
+                resetTimer();
+            }
+            
+            function updateScrambleDisplay() {
+                scrambleDisplay.textContent = currentScramble;
+            }
+            
+            function calculateAverage(times, count) {
+                if (times.length < count) return null;
+                
+                const subset = times.slice(0, count);
+                const sorted = [...subset].sort((a, b) => a.time - b.time);
+                
+                let trimmed = subset;
+                if (count >= 5) {
+                    trimmed = sorted.slice(1, -1);
+                }
+                
+                const sum = trimmed.reduce((acc, t) => acc + (t.penalty === '+2' ? t.time + 2 : t.penalty === 'DNF' ? Infinity : t.time), 0);
+                const dnfCount = trimmed.filter(t => t.penalty === 'DNF').length;
+                
+                if (dnfCount > 0) return 'DNF';
+                return sum / trimmed.length;
+            }
+            
+            function updateStats() {
+                const categoryTimes = times.filter(t => t.category === currentCategory);
+                const validTimes = categoryTimes.filter(t => t.penalty !== 'DNF').map(t => {
+                    return t.penalty === '+2' ? t.time + 2 : t.time;
+                });
+                
+                if (categoryTimes.length === 0) {
+                    currentTimeDisplay.textContent = '-';
+                    bestTimeDisplay.textContent = '-';
+                    avg5TimeDisplay.textContent = '-';
+                    avg12TimeDisplay.textContent = '-';
+                    return;
+                }
+                
+                // Tiempo actual
+                const current = categoryTimes[0];
+                currentTimeDisplay.textContent = formatTimeWithPenalty(current.time, current.penalty);
+                
+                // Mejor tiempo
+                const bestTime = validTimes.length > 0 ? Math.min(...validTimes) : null;
+                bestTimeDisplay.textContent = bestTime ? bestTime.toFixed(2) : '-';
+                
+                // Resaltar si es nuevo mejor tiempo
+                if (bestTime && current.time === bestTime && !current.penalty) {
+                    bestTimeDisplay.classList.add('text-yellow-400', 'animate-pulse');
+                    setTimeout(() => {
+                        bestTimeDisplay.classList.remove('animate-pulse');
+                    }, 2000);
+                } else {
+                    bestTimeDisplay.classList.remove('text-yellow-400', 'animate-pulse');
+                }
+                
+                // Avg5 y Avg12
+                const avg5 = calculateAverage(categoryTimes, 5);
+                const avg12 = calculateAverage(categoryTimes, 12);
+                
+                avg5TimeDisplay.textContent = avg5 ? (typeof avg5 === 'string' ? avg5 : avg5.toFixed(2)) : '-';
+                avg12TimeDisplay.textContent = avg12 ? (typeof avg12 === 'string' ? avg12 : avg12.toFixed(2)) : '-';
+            }
+            
+            function formatTimeWithPenalty(time, penalty) {
+                if (penalty === '+2') return (time + 2).toFixed(2) + '+';
+                if (penalty === 'DNF') return 'DNF';
+                return time.toFixed(2);
+            }
+            
+            function renderTimesList() {
+                const categoryTimes = times.filter(t => t.category === currentCategory);
+                
+                if (categoryTimes.length === 0) {
+                    timesList.innerHTML = '<div class="text-center text-gray-400 py-6"><i class="fas fa-clock text-2xl mb-2"></i><div>No hay tiempos registrados</div></div>';
+                    return;
+                }
+                
+                let html = '';
+                
+                categoryTimes.forEach((entry, index) => {
+                    html += `
+                        <div class="time-entry flex justify-between items-center p-3 border-b border-gray-700 text-sm cursor-pointer hover:bg-gray-800 rounded-lg mb-1">
+                            <div class="flex items-center">
+                                <span class="text-gray-400 mr-3 w-6 text-right">${index + 1}.</span>
+                                <span class="font-mono ${entry.penalty === '+2' ? 'text-yellow-400' : entry.penalty === 'DNF' ? 'text-red-400' : 'text-white'}">
+                                    ${formatTimeWithPenalty(entry.time, entry.penalty)}
+                                </span>
+                            </div>
+                            <div class="flex items-center">
+                                <div class="penalty-buttons mr-3">
+                                    <button class="penalty-btn text-xs px-2 py-1 rounded ${entry.penalty === undefined ? 'bg-blue-600 text-white' : 'bg-gray-700 text-gray-400'} mr-1" data-index="${index}" data-penalty="OK">OK</button>
+                                    <button class="penalty-btn text-xs px-2 py-1 rounded ${entry.penalty === '+2' ? 'bg-yellow-600 text-white' : 'bg-gray-700 text-gray-400'} mr-1" data-index="${index}" data-penalty="+2">+2</button>
+                                    <button class="penalty-btn text-xs px-2 py-1 rounded ${entry.penalty === 'DNF' ? 'bg-red-600 text-white' : 'bg-gray-700 text-gray-400'}" data-index="${index}" data-penalty="DNF">DNF</button>
+                                </div>
+                                <button class="delete-btn text-red-400 hover:text-red-300 ml-2" data-index="${index}">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                timesList.innerHTML = html;
+            }
+            
+            function showScrambleForTime(scramble) {
+                const modal = document.createElement('div');
+                modal.className = 'fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4';
+                modal.innerHTML = `
+                    <div class="bg-gray-800 rounded-xl p-6 max-w-md w-full border border-gray-700">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-semibold text-blue-400">
+                                <i class="fas fa-random mr-2"></i>Scramble
+                            </h3>
+                            <span class="text-xs bg-gray-700 text-blue-400 px-2 py-1 rounded-full">${getCategoryName(currentCategory)}</span>
+                        </div>
+                        <div class="scramble-display bg-gray-900 p-4 rounded-lg mb-4 text-center text-base leading-relaxed">${scramble}</div>
+                        <div class="flex justify-between items-center text-sm text-gray-400">
+                            <div>
+                                <i class="far fa-clock mr-1"></i>
+                                ${new Date().toLocaleDateString()}
+                            </div>
+                            <div>
+                                ${formatTimeWithPenalty(times.find(t => t.scramble === scramble).time, times.find(t => t.scramble === scramble).penalty)}
+                            </div>
+                        </div>
+                        <button class="w-full mt-4 py-2.5 btn-primary rounded-lg font-medium transition flex items-center justify-center">
+                            <i class="fas fa-times mr-2"></i>Cerrar
+                        </button>
+                    </div>
+                `;
+                
+                modal.querySelector('button').addEventListener('click', () => {
+                    modal.remove();
+                });
+                
+                document.body.appendChild(modal);
+            }
+            
+            function applyPenalty(index, penalty) {
+                const categoryTimes = times.filter(t => t.category === currentCategory);
+                const globalIndex = times.findIndex(t => t === categoryTimes[index]);
+                
+                if (globalIndex !== -1) {
+                    times[globalIndex].penalty = penalty === 'OK' ? undefined : penalty;
+                    localStorage.setItem('speedcube-times', JSON.stringify(times));
+                    updateStats();
+                    renderTimesList();
+                    updateChartData();
+                }
+            }
+            
+            function deleteTimeEntry(index) {
+                const categoryTimes = times.filter(t => t.category === currentCategory);
+                const globalIndex = times.findIndex(t => t === categoryTimes[index]);
+                
+                if (globalIndex !== -1) {
+                    times.splice(globalIndex, 1);
+                    localStorage.setItem('speedcube-times', JSON.stringify(times));
+                    updateStats();
+                    renderTimesList();
+                    updateChartData();
+                }
+            }
+            
+            function clearAllTimes() {
+                if (confirm('¿Estás seguro de que quieres borrar todos los tiempos de esta categoría?')) {
+                    times = times.filter(t => t.category !== currentCategory);
+                    localStorage.setItem('speedcube-times', JSON.stringify(times));
+                    updateStats();
+                    renderTimesList();
+                    updateChartData();
+                }
+            }
+            
+            function initTimesChart() {
+                const ctx = document.getElementById('times-chart').getContext('2d');
+                const categoryTimes = times.filter(t => t.category === currentCategory).reverse();
+                
+                if (categoryTimes.length < 2) {
+                    document.getElementById('times-chart').style.display = 'none';
+                    return;
+                }
+                
+                document.getElementById('times-chart').style.display = 'block';
+                
+                const labels = categoryTimes.map((_, i) => i + 1);
+                const data = categoryTimes.map(t => t.penalty === 'DNF' ? null : (t.penalty === '+2' ? t.time + 2 : t.time));
+                const bestTime = Math.min(...data.filter(t => t !== null));
+                
+                timesChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Tiempos',
+                            data: data,
+                            borderColor: primaryColor,
+                            backgroundColor: hexToRgba(primaryColor, 0.1),
+                            borderWidth: 2,
+                            tension: 0.3,
+                            fill: true,
+                            spanGaps: true,
+                            pointBackgroundColor: primaryColor,
+                            pointBorderColor: '#fff',
+                            pointHoverRadius: 6,
+                            pointRadius: 4
+                        }, {
+                            label: 'Mejor tiempo',
+                            data: Array(data.length).fill(bestTime),
+                            borderColor: accentColor,
+                            borderDash: [5, 5],
+                            borderWidth: 1,
+                            backgroundColor: 'transparent',
+                            pointRadius: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                grid: {
+                                    color: 'rgba(71, 85, 105, 0.3)'
+                                },
+                                ticks: {
+                                    color: '#94a3b8',
+                                    callback: function(value) {
+                                        return value.toFixed(2);
+                                    }
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: 'rgba(71, 85, 105, 0.3)'
+                                },
+                                ticks: {
+                                    color: '#94a3b8'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#e2e8f0',
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                                titleColor: '#e2e8f0',
+                                bodyColor: '#cbd5e1',
+                                borderColor: primaryColor,
+                                borderWidth: 1,
+                                callbacks: {
+                                    label: function(context) {
+                                        const index = context.dataIndex;
+                                        const time = categoryTimes[index];
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (time.penalty === 'DNF') {
+                                            label += 'DNF';
+                                        } else {
+                                            label += formatTimeWithPenalty(time.time, time.penalty);
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            function updateChartData() {
+                const categoryTimes = times.filter(t => t.category === currentCategory).reverse();
+                
+                if (!timesChart) {
+                    initTimesChart();
+                    return;
+                }
+                
+                if (categoryTimes.length < 2) {
+                    document.getElementById('times-chart').style.display = 'none';
+                    return;
+                }
+                
+                document.getElementById('times-chart').style.display = 'block';
+                
+                const labels = categoryTimes.map((_, i) => i + 1);
+                const data = categoryTimes.map(t => t.penalty === 'DNF' ? null : (t.penalty === '+2' ? t.time + 2 : t.time));
+                const bestTime = Math.min(...data.filter(t => t !== null));
+                
+                timesChart.data.labels = labels;
+                timesChart.data.datasets[0].data = data;
+                timesChart.data.datasets[1].data = Array(data.length).fill(bestTime);
+                timesChart.update();
+            }
+            
+            function updateChartColors() {
+                if (!timesChart) return;
+                
+                timesChart.data.datasets[0].borderColor = primaryColor;
+                timesChart.data.datasets[0].backgroundColor = hexToRgba(primaryColor, 0.1);
+                timesChart.data.datasets[0].pointBackgroundColor = primaryColor;
+                timesChart.data.datasets[1].borderColor = accentColor;
+                timesChart.options.plugins.tooltip.borderColor = primaryColor;
+                timesChart.update();
+            }
+            
+            function showPBAlert(time) {
+                const alert = document.createElement('div');
+                alert.className = 'fixed top-6 left-1/2 transform -translate-x-1/2 bg-gradient-to-r from-yellow-500 to-yellow-600 text-white px-6 py-3 rounded-full shadow-xl z-50 pb-alert flex items-center';
+                alert.innerHTML = `
+                    <i class="fas fa-trophy mr-3 text-xl"></i>
+                    <span class="font-bold">¡NUEVO RÉCORD! ${time.toFixed(2)}</span>
+                `;
+                document.body.appendChild(alert);
+                
+                setTimeout(() => {
+                    alert.classList.remove('pb-alert');
+                    alert.classList.add('opacity-0', 'transition-opacity', 'duration-500');
+                    setTimeout(() => {
+                        alert.remove();
+                    }, 500);
+                }, 3000);
+            }
+            
+            function getCategoryName(category) {
+                const names = {
+                    '333': '3x3x3',
+                    '222': '2x2x2',
+                    '444': '4x4x4',
+                    '555': '5x5x5',
+                    '666': '6x6x6',
+                    '777': '7x7x7',
+                    '333bf': '3x3x3 BLD',
+                    '333fm': '3x3x3 FM',
+                    '333oh': '3x3x3 OH',
+                    'clock': 'Clock',
+                    'minx': 'Megaminx',
+                    'pyram': 'Pyraminx',
+                    'skewb': 'Skewb',
+                    'sq1': 'Square-1',
+                    '444bf': '4x4x4 BLD',
+                    '555bf': '5x5x5 BLD',
+                    '333mbf': '3x3x3 MBLD'
+                };
+                return names[category] || category;
+            }
+        });
+
+// Manejo de clics en las opciones de CATEGORÍA
+const categoryOptions = document.querySelectorAll('#category-dropdown .category-option');
+categoryOptions.forEach(option => {
+    option.addEventListener('click', function(e) {
+        e.preventDefault();
+        currentCategory = this.dataset.category;
+        currentCategoryDisplay.textContent = getCategoryName(currentCategory);
+        currentCategoryDisplayMain.textContent = getCategoryName(currentCategory);
+        
+        // Actualizar opción activa
+        categoryOptions.forEach(o => o.classList.remove('active-category'));
+        this.classList.add('active-category');
+        
+        // Cerrar dropdown
+        categoryDropdown.style.display = 'none';
+        
+        // Generar nuevo scramble y actualizar UI
+        generateNewScramble(currentCategory);
+        updateStats();
+        renderTimesList();
+        updateChartData();
+    });
+});
+
+//  Obtener referencias a los elementos del menú de entrenamiento
+const trainingBtn = document.getElementById('training-btn');
+    const trainingDropdown = document.getElementById('training-dropdown');
+
+    // Manejo de clics en las opciones de ENTRENAMIENTO
+    const trainingOptions = document.querySelectorAll('#training-dropdown .category-option:not(.disabled)');
+    trainingOptions.forEach(option => {
+        option.addEventListener('click', function(e) {
+            if (this.classList.contains('disabled')) {
+                e.preventDefault();
+                return;
+            }
+            // No hacemos nada aquí para permitir la navegación
+        });
+    });
+
+    // Mostrar/ocultar menús (reorganizado)
+    categoryBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleDropdown(categoryDropdown);
+        hideDropdown(trainingDropdown);
+    });
+
+    trainingBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleDropdown(trainingDropdown);
+        hideDropdown(categoryDropdown);
+    });
+
+    // Función auxiliar para mostrar/ocultar
+    function toggleDropdown(dropdown) {
+        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+    }
+
+    // Función auxiliar para ocultar
+    function hideDropdown(dropdown) {
+        dropdown.style.display = 'none';
+    }
+
+    // Cerrar menús al hacer clic fuera
+    document.addEventListener('click', function(e) {
+        if (!categoryDropdown.contains(e.target) && e.target !== categoryBtn) {
+            hideDropdown(categoryDropdown);
+        }
+        if (!trainingDropdown.contains(e.target) && e.target !== trainingBtn) {
+            hideDropdown(trainingDropdown);
+        }
+    });
+    </script>
+</body>
+</html>
